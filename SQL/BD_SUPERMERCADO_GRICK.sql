@@ -437,4 +437,138 @@ SELECT SUP_RAZAO_SOCIAL AS "SUPERMERCADO",
 FROM SUPERMERCADO S 
 LEFT JOIN FUNCIONARIO F ON (S.SUP_CNPJ = F.FK_SUP_CNPJ);
 
+/* Selecionar apenas os PRODUTOS que possuem registro em um SUPERMERCADO  e q foram comprados por um CONSUMIDOR */
+SELECT PRO_NOME AS "NOME",
+	   PRO_CODIGO_BARRAS AS "CÓDIGO DE BARRAS",
+       PRO_QUANTIDADE AS "QUANTIDADE"
+FROM PRODUTO
+WHERE PRO_ID IN (SELECT FK_PRO_ID 
+				 FROM SUPERMERCADO_PRODUTO)
+AND PRO_ID IN (SELECT FK_PRO_ID 
+			   FROM PRODUTO_CONSUMIDOR);
+               
+/* Selecionar apenas os CONSUMIDORES que não compraram nenhum PRODUTO */
+SELECT CON_CPF AS "CPF",
+	   CON_NOME AS "NOME",
+       CON_EMAIL AS "E-MAIL"
+FROM CONSUMIDOR
+WHERE CON_CPF NOT IN (SELECT FK_CON_CPF
+					  FROM PRODUTO_CONSUMIDOR);
+
+/* Retornar todos os SUPERMERCADOS que têm o preço de todos os produtos menor que 10 */
+SELECT S.SUP_RAZAO_SOCIAL AS "NOME DO SUPERMERCADO"
+FROM SUPERMERCADO S
+WHERE 10 > ALL (SELECT PRO_PRECO P
+				FROM PRODUTO P
+				JOIN SUPERMERCADO_PRODUTO SP ON P.PRO_ID = SP.FK_PRO_ID
+				WHERE SP.FK_SUP_CNPJ = S.SUP_CNPJ);
+                
+/*Retornar os SUPERMERCADOS que possuem pelo menos um PRODUTO com preço inferior a R$10,00 */
+SELECT S.SUP_RAZAO_SOCIAL AS "NOME DO SUPERMERCADO"
+FROM SUPERMERCADO S
+WHERE 10 > ANY (SELECT PRO_PRECO P
+				FROM PRODUTO P
+				JOIN SUPERMERCADO_PRODUTO SP ON P.PRO_ID = SP.FK_PRO_ID
+				WHERE SP.FK_SUP_CNPJ = S.SUP_CNPJ);
+                
+/* Listar todos os CONSUMIDORES que compraram pelo menos um PRODUTO */
+SELECT C.CON_NOME AS "NOME DO CONSUMIDOR",
+	   C.CON_CPF AS "CPF DO CONSUMIDOR"
+FROM CONSUMIDOR C
+WHERE EXISTS (SELECT 1
+			  FROM PRODUTO_CONSUMIDOR PC
+              WHERE PC.FK_CON_CPF= C.CON_CPF);
+
+/* Selecione os SUPERMERCADOS que não possuem PRODUTOS cadastrados */
+SELECT SUP_RAZAO_SOCIAL AS "NOME DO SUPERMERCADO",
+	   S.SUP_CNPJ AS "CNPJ DO SUPERMERCADO"
+FROM SUPERMERCADO S 
+WHERE NOT EXISTS (SELECT 1 
+				  FROM SUPERMERCADO_PRODUTO SP
+                  WHERE SP.FK_SUP_CNPJ = S.SUP_CNPJ);
+                  
+SELECT * FROM SUPERMERCADO;
+/* 21123654000105 */
+
+/* TCL- Transaction control language */
+-- COMMIT
+-- INICIANDO A TRANSAÇÃO
+START TRANSACTION;
+
+-- Atualizar o grick de santa rita
+UPDATE SUPERMERCADO 
+SET SUP_EMAIL = 'contato.SRP@hotmail.com'
+WHERE SUP_CNPJ = '21123654000105';
+
+-- Inserir um novo consumidor
+INSERT INTO CONSUMIDOR (CON_CPF, CON_NOME, CON_TELEFONE, CON_EMAIL)
+VALUES ('39508376040','Virginia', '19991546677', 'vi@gamil.com');
+
+-- Se tudo der certo subimos as alterações para o servidor (esse pc/ localhost)
+COMMIT;
+
+-- ROLLBACK
+-- Iniciando a transação
+START TRANSACTION;
+
+-- Inserir um novo consumidor
+INSERT INTO CONSUMIDOR (CON_CPF, CON_NOME, CON_TELEFONE, CON_EMAIL)
+VALUES ('39508376123456040','Virginia', '19991546677', 'vi@gamil.com');
+
+-- Fazemos o rollback para voltar o estado original
+ROLLBACK;
+
+-- Savepoint
+START TRANSACTION;
+
+-- Inserir um produto
+INSERT INTO PRODUTO(PRO_CODIGO_BARRAS ,
+					PRO_NOME,
+					PRO_PESO,
+					PRO_QUANTIDADE,
+					PRO_PRECO )
+			VALUES ('7894525985',
+					'Escova de dente', 
+                    0.2,
+                    100,
+                    15.90);
+-- Criar um ponto de salvamento (SAVEPOINT)
+SAVEPOINT savepoint_produto1;
+
+-- Inserir mais um produto 
+INSERT INTO PRODUTO(PRO_CODIGO_BARRAS ,
+					PRO_NOME,
+					PRO_PESO,
+					PRO_QUANTIDADE,
+					PRO_PRECO)
+			VALUES ('3456786789',
+					'Arroz', 
+                    1.0,
+                    67,
+                    8,90);
+-- Criar um ponto de salvamento (SAVEPOINT)
+SAVEPOINT savepoint_produto2;
+
+-- Inserir mais um produto COM ERRO
+INSERT INTO PRODUTO(PRO_CODIGO_BARRAS ,
+					PRO_NOME,
+					PRO_PESO,
+					PRO_QUANTIDADE,
+					PRO_PRECO )
+			VALUES ('3456786789123456789009876543212345678909876543212345678987654321345678909876543214567890987654321234567890098765432123456789876543234567898765432345678909876543',
+					'Arroz', 
+                    1.0,
+                    67,
+                    8,90);
+-- Criar um ponto de salvamento (SAVEPOINT)
+SAVEPOINT savepoint_produto3;
+
+-- SE DER ERRO, podemos voltra para os pontos de salvamento
+ROLLBACK TO savepoint_produto2;
+COMMIT;
+
+
+
+
+
 
